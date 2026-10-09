@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LLM Control Hub</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Local AI Console</p>
+          <h1>LLM Control Hub</h1>
+        </div>
+        <div class="status-pill" id="status-pill">Checking service...</div>
+      </header>
+
+      <main class="layout">
+        <section class="panel controls">
+          <label for="model-select">Model</label>
+          <select id="model-select"></select>
+
+          <label for="system-prompt">System prompt</label>
+          <textarea id="system-prompt" rows="4">You are a helpful local coding assistant.</textarea>
+
+          <label for="prompt-box">Prompt</label>
+          <textarea id="prompt-box" rows="12" placeholder="Ask the local model anything..."></textarea>
+
+          <div class="actions">
+            <button id="submit-btn">Run</button>
+            <button id="clear-btn" class="secondary">Clear</button>
+          </div>
+        </section>
+
+        <section class="panel output-panel">
+          <h2>Response</h2>
+          <div id="response-box" class="response-box">Awaiting input...</div>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,146 @@
+:root {
+  --bg: #0b1020;
+  --panel: #121b2d;
+  --panel-alt: #18253f;
+  --border: #273656;
+  --text: #e6eefc;
+  --muted: #9fb4d9;
+  --accent: #4cc9f0;
+  --accent-strong: #48bfe3;
+  --shadow: rgba(0, 0, 0, 0.25);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Inter, "Segoe UI", sans-serif;
+  background: radial-gradient(circle at top, #122444, var(--bg) 36%);
+  color: var(--text);
+}
+
+.app-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+h1 {
+  margin: 6px 0 0;
+  font-size: clamp(2rem, 3vw, 3rem);
+}
+
+.status-pill {
+  background: rgba(76, 201, 240, 0.12);
+  color: #dff7ff;
+  border: 1px solid rgba(76, 201, 240, 0.35);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 20px;
+}
+
+.panel {
+  background: rgba(18, 27, 45, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px var(--shadow);
+  padding: 20px;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 16px 0 8px;
+}
+
+select,
+textarea,
+button {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text);
+  font: inherit;
+}
+
+select,
+textarea {
+  padding: 12px 14px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+button {
+  cursor: pointer;
+  padding: 12px 16px;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+button:hover {
+  filter: brightness(1.1);
+}
+
+#submit-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #031522;
+  border: none;
+}
+
+.secondary {
+  background: transparent;
+}
+
+.response-box {
+  min-height: 300px;
+  border: 1px solid var(--border);
+  background: rgba(8, 12, 18, 0.55);
+  border-radius: 14px;
+  padding: 18px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: #edf5ff;
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
