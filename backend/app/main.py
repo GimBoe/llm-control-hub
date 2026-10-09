@@ -30,6 +30,32 @@ class ChatRequest(BaseModel):
     stream: bool = False
 
 
+class CompareRequest(BaseModel):
+    models: list[str] | None = None
+    prompt: str
+    system: str | None = None
+
+
+def generate_model_response(model: str, prompt: str, system: str | None) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+    }
+    if system:
+        payload["system"] = system
+
+    response = requests.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload, timeout=180)
+    response.raise_for_status()
+    result = response.json()
+
+    return {
+        "model": model,
+        "response": result.get("response", ""),
+        "raw": result,
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {
@@ -54,26 +80,23 @@ def list_models() -> dict[str, Any]:
 @app.post("/chat")
 def chat(request: ChatRequest) -> dict[str, Any]:
     model = request.model or DEFAULT_MODEL
-    payload = {
-        "model": model,
-        "prompt": request.prompt,
-        "stream": False,
-    }
-    if request.system:
-        payload["system"] = request.system
+    result = generate_model_response(model, request.prompt, request.system)
+    return result
 
-    response = requests.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload, timeout=180)
-    response.raise_for_status()
-    result = response.json()
 
-    output = result.get("response", "")
+@app.post("/compare")
+def compare(request: CompareRequest) -> dict[str, Any]:
+    selected_models = request.models or [DEFAULT_MODEL]
+    results = [
+        generate_model_response(model, request.prompt, request.system)
+        for model in selected_models
+    ]
     return {
-        "model": model,
-        "response": output,
-        "raw": result,
+        "models": selected_models,
+        "results": results,
     }
 
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"message": f"Welcome to {APP_NAME}. Use /health, /models, and /chat."}
+    return {"message": f"Welcome to {APP_NAME}. Use /health, /models, /chat, and /compare."}
