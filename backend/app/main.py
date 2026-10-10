@@ -6,6 +6,7 @@ from typing import Any
 import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -34,6 +35,25 @@ class CompareRequest(BaseModel):
     models: list[str] | None = None
     prompt: str
     system: str | None = None
+    stream: bool = False
+
+
+def ollama_generate_stream(model: str, prompt: str, system: str | None):
+    payload: dict[str, Any] = {
+        "model": model,
+        "prompt": prompt,
+        "stream": True,
+    }
+    if system:
+        payload["system"] = system
+
+    response = requests.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload, stream=True, timeout=180)
+    response.raise_for_status()
+
+    for line in response.iter_lines(decode_unicode=True):
+        if not line:
+            continue
+        yield line + "\n"
 
 
 def generate_model_response(model: str, prompt: str, system: str | None) -> dict[str, Any]:
@@ -78,15 +98,30 @@ def list_models() -> dict[str, Any]:
 
 
 @app.post("/chat")
-def chat(request: ChatRequest) -> dict[str, Any]:
+def chat(request: ChatRequest):
     model = request.model or DEFAULT_MODEL
+    if request.stream:
+        return StreamingResponse(
+            (self_chunk for chunk in ollama_generate_stream(model, request.prompt, request.system)),
+            media_type="text/plain",
+        )
+
     result = generate_model_response(model, request.prompt, request.system)
     return result
 
 
 @app.post("/compare")
-def compare(request: CompareRequest) -> dict[str, Any]:
+def compare(request: CompareRequest):
     selected_models = request.models or [DEFAULT_MODEL]
+
+    if request.stream:
+        payload = {
+            "models": selected_models,
+            "prompt": request.prompt,
+            "system": request.system,
+        }
+        return {"status": "streaming_not_supported_for_compare", "payload": payload}
+
     results = [
         generate_model_response(model, request.prompt, request.system)
         for model in selected_models
