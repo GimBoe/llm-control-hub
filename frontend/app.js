@@ -1,4 +1,5 @@
 const modelList = document.getElementById('model-list');
+const provenanceList = document.getElementById('provenance-list');
 const systemPrompt = document.getElementById('system-prompt');
 const promptBox = document.getElementById('prompt-box');
 const responseBox = document.getElementById('response-box');
@@ -74,6 +75,35 @@ async function fetchHistory() {
   }
 }
 
+async function fetchProvenance() {
+  try {
+    const res = await fetch('/api/models/provenance');
+    const data = await res.json();
+    const models = Array.isArray(data.models) ? data.models : [];
+
+    if (!models.length) {
+      provenanceList.innerHTML = '<li class="history-empty">No provenance metadata available.</li>';
+      return;
+    }
+
+    provenanceList.innerHTML = models
+      .map((item) => {
+        const checksum = item.checksum ? item.checksum.slice(0, 12) : 'n/a';
+        const size = item.size ? `${(item.size / 1024 / 1024).toFixed(1)} MiB` : 'unknown';
+        return `
+          <li class="provenance-item">
+            <div class="history-title">${item.name}</div>
+            <div class="history-summary">${item.source} • ${size}</div>
+            <div class="history-meta">checksum: ${checksum}</div>
+          </li>
+        `;
+      })
+      .join('');
+  } catch (error) {
+    provenanceList.innerHTML = '<li class="history-empty">Provenance unavailable.</li>';
+  }
+}
+
 async function fetchModels() {
   try {
     const res = await fetch('/api/models');
@@ -105,6 +135,7 @@ async function fetchModels() {
 
     statusPill.textContent = 'Local service ready';
     statusPill.style.background = 'rgba(72, 191, 227, 0.14)';
+    fetchProvenance();
   } catch (error) {
     statusPill.textContent = 'Ollama not ready';
     statusPill.style.background = 'rgba(255, 153, 0, 0.14)';

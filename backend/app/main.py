@@ -2,14 +2,21 @@ from __future__ import annotations
 
 from typing import Any
 
-import requests
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.config import API_KEY, APP_NAME, DEFAULT_MODEL, LOCAL_ONLY, OLLAMA_BASE_URL, UNCENSORED_MODE
-from app.history import append_history_record, read_history
+from app.config import (
+    API_KEY,
+    APP_NAME,
+    DEFAULT_MODEL,
+    HISTORY_RETENTION_DAYS,
+    LOCAL_ONLY,
+    OLLAMA_BASE_URL,
+    UNCENSORED_MODE,
+)
+from app.history import append_history_record, clear_history, prune_history, read_history
 from app.runtime import OllamaRuntime
 
 app = FastAPI(title=APP_NAME)
@@ -70,6 +77,7 @@ def status() -> dict[str, Any]:
         "default_model": DEFAULT_MODEL,
         "api_key_configured": bool(API_KEY),
         "history_file": ".prompt_history.jsonl",
+        "history_retention_days": HISTORY_RETENTION_DAYS,
     }
 
 
@@ -99,9 +107,30 @@ def list_models() -> dict[str, Any]:
         return {"models": [DEFAULT_MODEL], "default_model": DEFAULT_MODEL, "warning": str(exc)}
 
 
+@app.get("/models/provenance")
+def model_provenance() -> dict[str, Any]:
+    try:
+        return {"models": runtime.get_provenance()}
+    except Exception as exc:  # pragma: no cover
+        return {"models": [], "warning": str(exc)}
+
+
 @app.get("/history")
 def history(limit: int = 20) -> dict[str, Any]:
+    prune_history(HISTORY_RETENTION_DAYS)
     return {"history": read_history(limit=max(1, min(limit, 100)))}
+
+
+@app.post("/history/clear")
+def clear_history_endpoint() -> dict[str, str]:
+    clear_history()
+    return {"status": "ok", "message": "History cleared."}
+
+
+@app.get("/history/export")
+def export_history() -> dict[str, Any]:
+    prune_history(HISTORY_RETENTION_DAYS)
+    return {"history": read_history(limit=1000)}
 
 
 @app.post("/chat")

@@ -16,6 +16,8 @@ This project supports the following safety and operational flags:
 - `LOCAL_ONLY=true` — default posture for the app. It warns users that the instance is intended for local runtime usage.
 - `UNCENSORED_MODE=false` — default posture; opt-in only. This disables any default safety layer imposed by the app itself.
 - `API_KEY=` — optional local API key for protecting your local API.
+- `HISTORY_KEY=` — optional encryption key for local prompt-history storage.
+- `HISTORY_RETENTION_DAYS=30` — number of days to retain prompt history before pruning.
 
 ## Hardened local deployment profile
 
@@ -35,6 +37,7 @@ This keeps the runtime on the host and reduces privileges for the containers. Us
 - Docker Compose wiring for local development and testing
 - Multi-model comparison and live streaming support
 - Local prompt history storage in `.prompt_history.jsonl`
+- Local model provenance metadata and checksum summary
 
 ## Streaming support
 
@@ -46,9 +49,12 @@ The backend is a FastAPI app that exposes:
 - `GET /health`
 - `GET /status`
 - `GET /history`
+- `GET /history/export`
 - `GET /models`
+- `GET /models/provenance`
 - `POST /chat`
 - `POST /compare`
+- `POST /history/clear`
 
 It proxies requests to the local Ollama runtime at `http://ollama:11434` by default.
 
@@ -91,6 +97,8 @@ UNCENSORED_MODE=false
 OLLAMA_BASE_URL=http://localhost:11434
 DEFAULT_MODEL=llama3.2
 API_KEY=
+HISTORY_KEY=
+HISTORY_RETENTION_DAYS=30
 ```
 
 Examples:
@@ -101,11 +109,12 @@ DEFAULT_MODEL=llama3.1:8b
 LOCAL_ONLY=true
 UNCENSORED_MODE=true
 API_KEY=my-local-key
+HISTORY_KEY=your-32-byte-key-if-enabled
 ```
 
 ## Local prompt history
 
-This app stores recent interactions locally in a JSONL file named `.prompt_history.jsonl` in the repository root. It captures the model name, prompt, system prompt, and serialized result payload for local debugging and review.
+This app stores recent interactions locally in a JSONL file named `.prompt_history.jsonl` in the repository root. It captures the model name, prompt, system prompt, and serialized result payload for local debugging and review. If `HISTORY_KEY` is set, the history is encrypted with Fernet before writing.
 
 ## Useful commands
 

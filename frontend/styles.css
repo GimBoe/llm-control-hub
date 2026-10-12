@@ -136,6 +136,34 @@ h1 {
   color: var(--muted);
 }
 
+.provenance-panel {
+  margin: 10px 0 18px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.provenance-panel h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.provenance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.provenance-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 10px 12px;
+}
+
 .hidden {
   display: none;
 }

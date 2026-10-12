@@ -8,3 +8,5 @@ PORT = int(os.getenv("PORT", "8000"))
 LOCAL_ONLY = os.getenv("LOCAL_ONLY", "true").strip().lower() in {"1", "true", "yes", "on"}
 UNCENSORED_MODE = os.getenv("UNCENSORED_MODE", "false").strip().lower() in {"1", "true", "yes", "on"}
 API_KEY = os.getenv("API_KEY")
+HISTORY_KEY = os.getenv("HISTORY_KEY")
+HISTORY_RETENTION_DAYS = int(os.getenv("HISTORY_RETENTION_DAYS", "30"))
