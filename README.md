@@ -17,6 +17,16 @@ This project supports the following safety and operational flags:
 - `UNCENSORED_MODE=false` — default posture; opt-in only. This disables any default safety layer imposed by the app itself.
 - `API_KEY=` — optional local API key for protecting your local API.
 
+## Hardened local deployment profile
+
+The default Compose setup now binds ports to localhost and applies conservative Docker security defaults:
+
+```bash
+docker compose --profile local_only up
+```
+
+This keeps the runtime on the host and reduces privileges for the containers. Use this profile when you want the safest local-only setup.
+
 ## What's included
 
 - `ollama`: local model runtime

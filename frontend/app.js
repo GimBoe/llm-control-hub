@@ -9,6 +9,7 @@ const uncensoredToggle = document.getElementById('uncensored-toggle');
 const uncensoredNote = document.getElementById('uncensored-note');
 const submitBtn = document.getElementById('submit-btn');
 const clearBtn = document.getElementById('clear-btn');
+const historyList = document.getElementById('history-list');
 
 let availableModels = [];
 let uncensoredModeEnabled = false;
@@ -40,6 +41,36 @@ async function fetchStatus() {
   } catch (error) {
     localStatus.textContent = 'Local-only: unknown';
     uncensoredStatus.textContent = 'Uncensored mode: unknown';
+  }
+}
+
+async function fetchHistory() {
+  try {
+    const res = await fetch('/api/history?limit=5');
+    const data = await res.json();
+    const items = Array.isArray(data.history) ? data.history : [];
+
+    if (!items.length) {
+      historyList.innerHTML = '<li class="history-empty">No local activity yet.</li>';
+      return;
+    }
+
+    historyList.innerHTML = items
+      .map((item) => {
+        const payload = item.payload || {};
+        const summary = payload.prompt || payload.models || 'Local activity';
+        const title = payload.model || (Array.isArray(payload.models) ? payload.models.join(', ') : item.kind);
+        return `
+          <li class="history-item">
+            <div class="history-title">${title}</div>
+            <div class="history-summary">${String(summary).slice(0, 120)}</div>
+            <div class="history-meta">${item.kind} • ${item.timestamp ? new Date(item.timestamp).toLocaleString() : 'local'}</div>
+          </li>
+        `;
+      })
+      .join('');
+  } catch (error) {
+    historyList.innerHTML = '<li class="history-empty">History unavailable.</li>';
   }
 }
 
@@ -160,6 +191,7 @@ async function submitPrompt() {
         responseBox.textContent = text;
       }
 
+      fetchHistory();
       return;
     }
 
@@ -176,6 +208,7 @@ async function submitPrompt() {
     }
 
     renderCompareResults(data.results || []);
+    fetchHistory();
   } catch (error) {
     responseBox.textContent = `Request failed: ${error.message}`;
   } finally {
@@ -211,3 +244,4 @@ submitBtn.addEventListener('click', submitPrompt);
 
 fetchStatus();
 fetchModels();
+fetchHistory();

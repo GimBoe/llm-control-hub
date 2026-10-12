@@ -19,6 +19,7 @@ body {
   --warning-bg: rgba(255, 183, 3, 0.12);
   --success: #7ae582;
   --success-bg: rgba(122, 229, 130, 0.12);
+  --soft: rgba(255, 255, 255, 0.04);
 }
 
 * { box-sizing: border-box; }
@@ -126,6 +127,15 @@ h1 {
   line-height: 1.5;
 }
 
+.runtime-banner {
+  margin: 0 0 18px 0;
+  padding: 12px 14px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+}
+
 .hidden {
   display: none;
 }
@@ -158,6 +168,47 @@ label {
 
 .model-option input {
   accent-color: var(--accent);
+}
+
+.history-panel {
+  margin-top: 20px;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.history-item {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.history-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.history-summary {
+  color: var(--muted);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.history-meta {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.history-empty {
+  color: var(--muted);
+  padding: 10px 0;
 }
 
 select,

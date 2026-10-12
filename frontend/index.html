@@ -30,7 +30,11 @@
           </div>
 
           <div id="uncensored-note" class="warning-banner hidden">
-            Enabling uncensored mode removes the default safety layer from outputs. This can expose harmful, illegal, or policy-violating content depending on the model. Only enable it when you understand the risks and operate within your local laws.
+            Enabling uncensored mode removes the default safety layer from outputs. This can expose harmful, illegal, or policy-violating content depending on the model. Only enable it when you understand the risks and local legal requirements.
+          </div>
+
+          <div class="runtime-banner">
+            <strong>Model source:</strong> local Ollama runtime
           </div>
 
           <label class="field-label">Models</label>
@@ -53,6 +57,11 @@
           <div id="response-box" class="response-box">Awaiting input...</div>
         </section>
       </main>
+
+      <aside class="panel history-panel">
+        <h2>Recent local activity</h2>
+        <ul id="history-list" class="history-list"></ul>
+      </aside>
     </div>
 
     <script src="app.js"></script>

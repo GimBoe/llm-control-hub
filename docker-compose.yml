@@ -5,8 +5,9 @@ services:
     image: ollama/ollama:latest
     container_name: llm-ollama
     restart: unless-stopped
+    profiles: ["default", "local_only"]
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama_data:/root/.ollama
     environment:
@@ -16,12 +17,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   api:
     build:
       context: ./backend
     container_name: llm-api
     restart: unless-stopped
+    profiles: ["default", "local_only"]
     depends_on:
       ollama:
         condition: service_healthy
@@ -31,20 +37,32 @@ services:
       - PORT=8000
       - APP_NAME=LLM Control Hub
       - DEFAULT_MODEL=llama3.2
+      - LOCAL_ONLY=true
+      - UNCENSORED_MODE=false
+      - API_KEY=
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   web:
     image: nginx:alpine
     container_name: llm-web
     restart: unless-stopped
+    profiles: ["default", "local_only"]
     depends_on:
       - api
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:80"
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
 volumes:
   ollama_data:

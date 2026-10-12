@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Any
 
 import requests
@@ -65,9 +64,12 @@ def status() -> dict[str, Any]:
         "app": APP_NAME,
         "local_only": LOCAL_ONLY,
         "uncensored_mode": UNCENSORED_MODE,
+        "runtime": "ollama",
+        "runtime_source": "local Ollama runtime",
         "ollama_base_url": OLLAMA_BASE_URL,
         "default_model": DEFAULT_MODEL,
         "api_key_configured": bool(API_KEY),
+        "history_file": ".prompt_history.jsonl",
     }
 
 
@@ -79,6 +81,7 @@ def health() -> dict[str, Any]:
         "ollama_base_url": OLLAMA_BASE_URL,
         "local_only": LOCAL_ONLY,
         "uncensored_mode": UNCENSORED_MODE,
+        "runtime_source": "local Ollama runtime",
     }
 
 
@@ -86,7 +89,12 @@ def health() -> dict[str, Any]:
 def list_models() -> dict[str, Any]:
     try:
         models = runtime.list_models()
-        return {"models": models or [DEFAULT_MODEL], "default_model": DEFAULT_MODEL}
+        return {
+            "models": models or [DEFAULT_MODEL],
+            "default_model": DEFAULT_MODEL,
+            "runtime": "ollama",
+            "source": "local Ollama runtime",
+        }
     except Exception as exc:  # pragma: no cover
         return {"models": [DEFAULT_MODEL], "default_model": DEFAULT_MODEL, "warning": str(exc)}
 
@@ -118,11 +126,7 @@ def chat(request: Request, payload: ChatRequest):
         )
 
     result = runtime.generate(model, payload.prompt, payload.system)
-    _log_interaction(
-        "chat_response",
-        {"model": model},
-        result,
-    )
+    _log_interaction("chat_response", {"model": model}, result)
     return result
 
 
