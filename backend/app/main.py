@@ -4,14 +4,12 @@ import os
 from typing import Any
 
 import requests
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "llama3.2")
-APP_NAME = os.getenv("APP_NAME", "LLM Control Hub")
+from app.config import API_KEY, APP_NAME, DEFAULT_MODEL, LOCAL_ONLY, OLLAMA_BASE_URL, UNCENSORED_MODE
 
 app = FastAPI(title=APP_NAME)
 
@@ -36,6 +34,14 @@ class CompareRequest(BaseModel):
     prompt: str
     system: str | None = None
     stream: bool = False
+
+
+def _check_api_key(request: Request) -> None:
+    if not API_KEY:
+        return
+    supplied = request.headers.get("x-api-key") or request.headers.get("X-API-Key")
+    if supplied != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
 def ollama_generate_stream(model: str, prompt: str, system: str | None):
@@ -76,12 +82,26 @@ def generate_model_response(model: str, prompt: str, system: str | None) -> dict
     }
 
 
+@app.get("/status")
+def status() -> dict[str, Any]:
+    return {
+        "app": APP_NAME,
+        "local_only": LOCAL_ONLY,
+        "uncensored_mode": UNCENSORED_MODE,
+        "ollama_base_url": OLLAMA_BASE_URL,
+        "default_model": DEFAULT_MODEL,
+        "api_key_configured": bool(API_KEY),
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {
         "status": "ok",
         "app": APP_NAME,
         "ollama_base_url": OLLAMA_BASE_URL,
+        "local_only": LOCAL_ONLY,
+        "uncensored_mode": UNCENSORED_MODE,
     }
 
 
@@ -98,32 +118,36 @@ def list_models() -> dict[str, Any]:
 
 
 @app.post("/chat")
-def chat(request: ChatRequest):
-    model = request.model or DEFAULT_MODEL
-    if request.stream:
+def chat(request: Request, payload: ChatRequest):
+    _check_api_key(request)
+    model = payload.model or DEFAULT_MODEL
+    if payload.stream:
         return StreamingResponse(
-            ollama_generate_stream(model, request.prompt, request.system),
+            ollama_generate_stream(model, payload.prompt, payload.system),
             media_type="text/plain",
         )
 
-    result = generate_model_response(model, request.prompt, request.system)
+    result = generate_model_response(model, payload.prompt, payload.system)
     return result
 
 
 @app.post("/compare")
-def compare(request: CompareRequest):
-    selected_models = request.models or [DEFAULT_MODEL]
+def compare(request: Request, payload: CompareRequest):
+    _check_api_key(request)
+    selected_models = payload.models or [DEFAULT_MODEL]
 
-    if request.stream:
-        payload = {
-            "models": selected_models,
-            "prompt": request.prompt,
-            "system": request.system,
+    if payload.stream:
+        return {
+            "status": "streaming_not_supported_for_compare",
+            "payload": {
+                "models": selected_models,
+                "prompt": payload.prompt,
+                "system": payload.system,
+            },
         }
-        return {"status": "streaming_not_supported_for_compare", "payload": payload}
 
     results = [
-        generate_model_response(model, request.prompt, request.system)
+        generate_model_response(model, payload.prompt, payload.system)
         for model in selected_models
     ]
     return {

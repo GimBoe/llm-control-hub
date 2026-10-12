@@ -1,6 +1,19 @@
 # LLM Control Hub
 
-A Dockerized local LLM control hub that runs a Python API, static web UI, and Ollama container. It lets you select a local model, send prompts, and inspect responses without sending data to a third-party service.
+A Dockerized local LLM control hub that runs a Python API, static web UI, and Ollama container. It lets you select a local model, send prompts, and inspect responses without sending data to a third-party service by default.
+
+## What makes this project local-first
+
+- The app is designed to run entirely on your local machine.
+- The default behavior assumes the Ollama runtime and model files stay on the host.
+- The app is intentionally simple and local-first: model inference happens in Ollama, not in a remote SaaS endpoint.
+
+## Local-only and uncensored mode
+
+This project now supports two important operational flags:
+
+- `LOCAL_ONLY=true` — indicates the app is intended to run without outbound connectivity assumptions. It is enabled by default.
+- `UNCENSORED_MODE=false` — disables pre-applied content filtering at the app level. This is opt-in and should be used only when you understand the risks and local legal requirements.
 
 ## What's included
 
@@ -12,31 +25,18 @@ A Dockerized local LLM control hub that runs a Python API, static web UI, and Ol
 
 ## Streaming support
 
-Streaming means the response is displayed as it is generated, rather than waiting for the entire text to finish. The API uses `stream=True` when talking to Ollama and the frontend reads chunks from the HTTP response in real time.
+Streaming means the response is displayed as it is generated, rather than waiting for the entire text to finish. The API uses `stream=True` when talking to Ollama and the frontend reads chunks from the stream in real time.
 
-## Dockerized option breakdown
+## API layer
 
-### 1. API layer
 The backend is a FastAPI app that exposes:
 - `GET /health`
+- `GET /status`
 - `GET /models`
 - `POST /chat`
 - `POST /compare`
 
-It proxies requests to the local Ollama runtime at `http://ollama:11434`.
-
-### 2. Model runtime
-The `ollama` container is the real inference engine. It keeps models on a Docker volume so they are not lost when the service restarts.
-
-### 3. Web layer
-The `web` service serves a simple HTML + JS interface on port `3000`, proxied to the API on port `8000`.
-
-### 4. Runtime flow
-- User types a prompt in the browser
-- Browser sends request to `/api/chat`
-- FastAPI sends the request to Ollama with `stream=True`
-- Ollama streams chunks back as they are generated
-- The browser renders each chunk in real time
+It proxies requests to the local Ollama runtime at `http://ollama:11434` by default.
 
 ## Quick start
 
@@ -64,6 +64,29 @@ http://localhost:3000
 docker exec -it llm-ollama ollama pull llama3.2
 ```
 
+## Environment overrides
+
+You can override the default OpenAI/Ollama settings in `.env`:
+
+```dotenv
+APP_NAME=LLM Control Hub
+HOST=0.0.0.0
+PORT=8000
+LOCAL_ONLY=true
+UNCENSORED_MODE=false
+OLLAMA_BASE_URL=http://localhost:11434
+DEFAULT_MODEL=llama3.2
+API_KEY=
+```
+
+Examples:
+
+```dotenv
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+DEFAULT_MODEL=llama3.1:8b
+LOCAL_ONLY=true
+```
+
 ## Useful commands
 
 ```bash
@@ -74,9 +97,9 @@ docker compose down
 docker volume ls
 ```
 
-## Notes
+## Responsible use and limits
 
-This setup is intentionally simple and local-first. It is designed to run models you pull into Ollama, so the "uncensored" or policy-free behavior depends entirely on the model you select and the environment you run it in.
+This setup is intentionally simple and local-first. It is designed to run models you pull into Ollama, and the app does not require a hosted inference service. However, the project itself does not provide law or policy guarantees. Using uncensored model behavior remains the operator's responsibility, and you should comply with local laws, content rules, and your environment's safety policies.
 
 ## Project structure
 

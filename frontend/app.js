@@ -3,14 +3,44 @@ const systemPrompt = document.getElementById('system-prompt');
 const promptBox = document.getElementById('prompt-box');
 const responseBox = document.getElementById('response-box');
 const statusPill = document.getElementById('status-pill');
+const localStatus = document.getElementById('local-status');
+const uncensoredStatus = document.getElementById('uncensored-status');
+const uncensoredToggle = document.getElementById('uncensored-toggle');
+const uncensoredNote = document.getElementById('uncensored-note');
 const submitBtn = document.getElementById('submit-btn');
 const clearBtn = document.getElementById('clear-btn');
 
 let availableModels = [];
+let uncensoredModeEnabled = false;
+
+function updateUncensoredUI() {
+  uncensoredToggle.checked = uncensoredModeEnabled;
+  uncensoredStatus.textContent = uncensoredModeEnabled ? 'Uncensored mode: on' : 'Uncensored mode: off';
+  uncensoredStatus.classList.toggle('warning-pill', !uncensoredModeEnabled);
+  uncensoredStatus.classList.toggle('success-pill', uncensoredModeEnabled);
+  uncensoredNote.classList.toggle('hidden', !uncensoredModeEnabled);
+}
 
 function getSelectedModels() {
   const checked = [...document.querySelectorAll('#model-list input[type="checkbox"]:checked')];
   return checked.map((checkbox) => checkbox.value);
+}
+
+async function fetchStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+
+    localStatus.textContent = data.local_only ? 'Local-only: on' : 'Local-only: off';
+    localStatus.classList.toggle('info-pill', data.local_only);
+    localStatus.classList.toggle('warning-pill', !data.local_only);
+
+    uncensoredModeEnabled = Boolean(data.uncensored_mode);
+    updateUncensoredUI();
+  } catch (error) {
+    localStatus.textContent = 'Local-only: unknown';
+    uncensoredStatus.textContent = 'Uncensored mode: unknown';
+  }
 }
 
 async function fetchModels() {
@@ -96,13 +126,15 @@ async function submitPrompt() {
             model: selectedModels[0],
             prompt,
             system: systemPrompt.value.trim() || 'You are a helpful assistant.',
-            stream: true
+            stream: true,
+            uncensored: uncensoredModeEnabled
           }
         : {
             models: selectedModels,
             prompt,
             system: systemPrompt.value.trim() || 'You are a helpful assistant.',
-            stream: false
+            stream: false,
+            uncensored: uncensoredModeEnabled
           };
 
     if (selectedModels.length === 1) {
@@ -111,6 +143,11 @@ async function submitPrompt() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Request failed');
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -147,6 +184,24 @@ async function submitPrompt() {
   }
 }
 
+uncensoredToggle.addEventListener('change', () => {
+  const next = uncensoredToggle.checked;
+  if (next) {
+    const confirmed = window.confirm(
+      'Enabling uncensored mode can expose unfiltered model outputs. Continue only if you understand the risks and local legal requirements.'
+    );
+    if (!confirmed) {
+      uncensoredToggle.checked = false;
+      uncensoredModeEnabled = false;
+      updateUncensoredUI();
+      return;
+    }
+  }
+
+  uncensoredModeEnabled = next;
+  updateUncensoredUI();
+});
+
 clearBtn.addEventListener('click', () => {
   promptBox.value = '';
   responseBox.textContent = 'Awaiting input...';
@@ -154,4 +209,5 @@ clearBtn.addEventListener('click', () => {
 
 submitBtn.addEventListener('click', submitPrompt);
 
+fetchStatus();
 fetchModels();

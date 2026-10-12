@@ -13,11 +13,26 @@
           <p class="eyebrow">Local AI Console</p>
           <h1>LLM Control Hub</h1>
         </div>
-        <div class="status-pill" id="status-pill">Checking service...</div>
+        <div class="status-cluster">
+          <div class="status-pill" id="status-pill">Checking service...</div>
+          <div class="status-pill info-pill" id="local-status">Local-only: checking...</div>
+          <div class="status-pill warning-pill" id="uncensored-status">Uncensored mode: off</div>
+        </div>
       </header>
 
       <main class="layout">
         <section class="panel controls">
+          <div class="settings-row">
+            <label class="toggle-row" for="uncensored-toggle">
+              <input id="uncensored-toggle" type="checkbox" />
+              <span>Enable uncensored mode</span>
+            </label>
+          </div>
+
+          <div id="uncensored-note" class="warning-banner hidden">
+            Enabling uncensored mode removes the default safety layer from outputs. This can expose harmful, illegal, or policy-violating content depending on the model. Only enable it when you understand the risks and operate within your local laws.
+          </div>
+
           <label class="field-label">Models</label>
           <div id="model-list" class="model-list"></div>
 
