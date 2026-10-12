@@ -10,9 +10,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.config import API_KEY, APP_NAME, DEFAULT_MODEL, LOCAL_ONLY, OLLAMA_BASE_URL, UNCENSORED_MODE
+from app.history import append_history_record, read_history
+from app.runtime import OllamaRuntime
 
 app = FastAPI(title=APP_NAME)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,6 +21,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+runtime = OllamaRuntime(OLLAMA_BASE_URL)
 
 
 class ChatRequest(BaseModel):
@@ -44,42 +47,16 @@ def _check_api_key(request: Request) -> None:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
-def ollama_generate_stream(model: str, prompt: str, system: str | None):
-    payload: dict[str, Any] = {
-        "model": model,
-        "prompt": prompt,
-        "stream": True,
-    }
-    if system:
-        payload["system"] = system
-
-    response = requests.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload, stream=True, timeout=180)
-    response.raise_for_status()
-
-    for line in response.iter_lines(decode_unicode=True):
-        if not line:
-            continue
-        yield line + "\n"
-
-
-def generate_model_response(model: str, prompt: str, system: str | None) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-    }
-    if system:
-        payload["system"] = system
-
-    response = requests.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload, timeout=180)
-    response.raise_for_status()
-    result = response.json()
-
-    return {
-        "model": model,
-        "response": result.get("response", ""),
-        "raw": result,
-    }
+def _log_interaction(kind: str, payload: dict[str, Any], result: dict[str, Any] | None = None) -> None:
+    append_history_record(
+        {
+            "kind": kind,
+            "local_only": LOCAL_ONLY,
+            "uncensored_mode": UNCENSORED_MODE,
+            "payload": payload,
+            "result": result,
+        }
+    )
 
 
 @app.get("/status")
@@ -108,26 +85,44 @@ def health() -> dict[str, Any]:
 @app.get("/models")
 def list_models() -> dict[str, Any]:
     try:
-        response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=20)
-        response.raise_for_status()
-        data = response.json()
-        models = [item["name"] for item in data.get("models", [])]
+        models = runtime.list_models()
         return {"models": models or [DEFAULT_MODEL], "default_model": DEFAULT_MODEL}
     except Exception as exc:  # pragma: no cover
         return {"models": [DEFAULT_MODEL], "default_model": DEFAULT_MODEL, "warning": str(exc)}
+
+
+@app.get("/history")
+def history(limit: int = 20) -> dict[str, Any]:
+    return {"history": read_history(limit=max(1, min(limit, 100)))}
 
 
 @app.post("/chat")
 def chat(request: Request, payload: ChatRequest):
     _check_api_key(request)
     model = payload.model or DEFAULT_MODEL
+    _log_interaction(
+        "chat",
+        {
+            "model": model,
+            "prompt": payload.prompt,
+            "system": payload.system,
+            "stream": payload.stream,
+            "uncensored_mode": UNCENSORED_MODE,
+        },
+    )
+
     if payload.stream:
         return StreamingResponse(
-            ollama_generate_stream(model, payload.prompt, payload.system),
+            runtime.generate_stream(model, payload.prompt, payload.system),
             media_type="text/plain",
         )
 
-    result = generate_model_response(model, payload.prompt, payload.system)
+    result = runtime.generate(model, payload.prompt, payload.system)
+    _log_interaction(
+        "chat_response",
+        {"model": model},
+        result,
+    )
     return result
 
 
@@ -146,16 +141,15 @@ def compare(request: Request, payload: CompareRequest):
             },
         }
 
-    results = [
-        generate_model_response(model, payload.prompt, payload.system)
-        for model in selected_models
-    ]
-    return {
-        "models": selected_models,
-        "results": results,
-    }
+    results = [runtime.generate(model, payload.prompt, payload.system) for model in selected_models]
+    _log_interaction(
+        "compare",
+        {"models": selected_models, "prompt": payload.prompt, "system": payload.system},
+        {"results": results},
+    )
+    return {"models": selected_models, "results": results}
 
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"message": f"Welcome to {APP_NAME}. Use /health, /models, /chat, and /compare."}
+    return {"message": f"Welcome to {APP_NAME}. Use /health, /status, /history, /models, /chat, and /compare."}

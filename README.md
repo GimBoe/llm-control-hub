@@ -7,13 +7,15 @@ A Dockerized local LLM control hub that runs a Python API, static web UI, and Ol
 - The app is designed to run entirely on your local machine.
 - The default behavior assumes the Ollama runtime and model files stay on the host.
 - The app is intentionally simple and local-first: model inference happens in Ollama, not in a remote SaaS endpoint.
+- `LOCAL_ONLY=true` is the default and indicates the intended runtime posture.
 
 ## Local-only and uncensored mode
 
-This project now supports two important operational flags:
+This project supports the following safety and operational flags:
 
-- `LOCAL_ONLY=true` — indicates the app is intended to run without outbound connectivity assumptions. It is enabled by default.
-- `UNCENSORED_MODE=false` — disables pre-applied content filtering at the app level. This is opt-in and should be used only when you understand the risks and local legal requirements.
+- `LOCAL_ONLY=true` — default posture for the app. It warns users that the instance is intended for local runtime usage.
+- `UNCENSORED_MODE=false` — default posture; opt-in only. This disables any default safety layer imposed by the app itself.
+- `API_KEY=` — optional local API key for protecting your local API.
 
 ## What's included
 
@@ -22,6 +24,7 @@ This project now supports two important operational flags:
 - `web`: lightweight Nginx UI for interacting with the hub
 - Docker Compose wiring for local development and testing
 - Multi-model comparison and live streaming support
+- Local prompt history storage in `.prompt_history.jsonl`
 
 ## Streaming support
 
@@ -32,6 +35,7 @@ Streaming means the response is displayed as it is generated, rather than waitin
 The backend is a FastAPI app that exposes:
 - `GET /health`
 - `GET /status`
+- `GET /history`
 - `GET /models`
 - `POST /chat`
 - `POST /compare`
@@ -66,7 +70,7 @@ docker exec -it llm-ollama ollama pull llama3.2
 
 ## Environment overrides
 
-You can override the default OpenAI/Ollama settings in `.env`:
+You can override the default runtime settings in `.env`:
 
 ```dotenv
 APP_NAME=LLM Control Hub
@@ -85,7 +89,13 @@ Examples:
 OLLAMA_BASE_URL=http://host.docker.internal:11434
 DEFAULT_MODEL=llama3.1:8b
 LOCAL_ONLY=true
+UNCENSORED_MODE=true
+API_KEY=my-local-key
 ```
+
+## Local prompt history
+
+This app stores recent interactions locally in a JSONL file named `.prompt_history.jsonl` in the repository root. It captures the model name, prompt, system prompt, and serialized result payload for local debugging and review.
 
 ## Useful commands
 
@@ -99,7 +109,7 @@ docker volume ls
 
 ## Responsible use and limits
 
-This setup is intentionally simple and local-first. It is designed to run models you pull into Ollama, and the app does not require a hosted inference service. However, the project itself does not provide law or policy guarantees. Using uncensored model behavior remains the operator's responsibility, and you should comply with local laws, content rules, and your environment's safety policies.
+This setup is intentionally simple and local-first. It is designed to run models you pull into Ollama, and the app does not require a hosted inference service. However, the project itself does not provide legal or policy guarantees. Using uncensored mode remains the operator's responsibility, and you should comply with local laws, content rules, and your environment's safety policies.
 
 ## Project structure
 
@@ -108,7 +118,9 @@ This setup is intentionally simple and local-first. It is designed to run models
 ├── backend/
 │   ├── app/
 │   │   ├── config.py
-│   │   └── main.py
+│   │   ├── history.py
+│   │   ├── main.py
+│   │   └── runtime.py
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
@@ -121,4 +133,5 @@ This setup is intentionally simple and local-first. It is designed to run models
 ├── .gitignore
 ├── docker-compose.yml
 ├── README.md
+├── .prompt_history.jsonl
 ```
