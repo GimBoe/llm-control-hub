@@ -102,7 +102,7 @@ def chat(request: ChatRequest):
     model = request.model or DEFAULT_MODEL
     if request.stream:
         return StreamingResponse(
-            (self_chunk for chunk in ollama_generate_stream(model, request.prompt, request.system)),
+            ollama_generate_stream(model, request.prompt, request.system),
             media_type="text/plain",
         )
 
